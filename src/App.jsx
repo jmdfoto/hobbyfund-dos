@@ -44,6 +44,14 @@ function App() {
     setState((s) => ({ ...s, kidName }));
   }
 
+  function handleResetAll() {
+    const confirmed = window.confirm(
+      "Reset all data? This clears every transaction and can't be undone."
+    );
+    if (!confirmed) return;
+    setState((s) => ({ ...s, transactions: [] }));
+  }
+
   return (
     <div className="app">
       <Header kidName={state.kidName} onNameChange={handleNameChange} />
@@ -54,6 +62,10 @@ function App() {
         <SaveChart transactions={state.transactions} />
         <InvestChart transactions={state.transactions} />
         <History transactions={state.transactions} />
+
+        <button type="button" className="reset-all-link" onClick={handleResetAll}>
+          Reset all data
+        </button>
       </main>
 
       {activeModal === "allowance" && (
