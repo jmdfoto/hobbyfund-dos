@@ -477,6 +477,13 @@
   width: 100%;
 }
 
+.utility-links {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 4px;
+}
+
 .reset-all-link {
   background: none;
   border: none;
@@ -484,6 +491,5 @@
   font-size: 13px;
   text-decoration: underline;
   padding: 8px;
-  margin: 4px auto 0;
   cursor: pointer;
 }

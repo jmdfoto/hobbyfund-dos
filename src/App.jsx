@@ -11,6 +11,7 @@ import AddAllowanceModal from "./components/modals/AddAllowanceModal.jsx";
 import LogPurchaseModal from "./components/modals/LogPurchaseModal.jsx";
 import MoveMoneyModal from "./components/modals/MoveMoneyModal.jsx";
 import InvestModal from "./components/modals/InvestModal.jsx";
+import { transactionsToCsv, downloadTextFile } from "./lib/csv.js";
 import "./App.css";
 
 function App() {
@@ -44,6 +45,13 @@ function App() {
     setState((s) => ({ ...s, kidName }));
   }
 
+  function handleExportCsv() {
+    const csv = transactionsToCsv(state.transactions);
+    const namePart = state.kidName.trim().toLowerCase().replace(/\s+/g, "-") || "collection-fund";
+    const datePart = new Date().toISOString().slice(0, 10);
+    downloadTextFile(csv, `${namePart}-${datePart}.csv`, "text/csv");
+  }
+
   function handleResetAll() {
     const confirmed = window.confirm(
       "Reset all data? This clears every transaction and can't be undone."
@@ -63,9 +71,14 @@ function App() {
         <InvestChart transactions={state.transactions} />
         <History transactions={state.transactions} />
 
-        <button type="button" className="reset-all-link" onClick={handleResetAll}>
-          Reset all data
-        </button>
+        <div className="utility-links">
+          <button type="button" className="reset-all-link" onClick={handleExportCsv}>
+            Export CSV
+          </button>
+          <button type="button" className="reset-all-link" onClick={handleResetAll}>
+            Reset all data
+          </button>
+        </div>
       </main>
 
       {activeModal === "allowance" && (
