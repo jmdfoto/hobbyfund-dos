@@ -6,6 +6,7 @@ export default function AddAllowanceModal({ onConfirm, onClose }) {
   const [total, setTotal] = useState("50");
   const [spendAmount, setSpendAmount] = useState(25);
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const totalNum = Number(total) || 0;
   const saveAmount = Math.max(0, totalNum - spendAmount);
@@ -22,13 +23,16 @@ export default function AddAllowanceModal({ onConfirm, onClose }) {
     setSpendAmount(clamped);
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     if (totalNum <= 0) {
       setError("Enter an amount greater than $0.");
       return;
     }
-    onConfirm({ spendAmount, saveAmount });
+    setSubmitting(true);
+    const result = await onConfirm({ type: "allowance", spendAmount, saveAmount });
+    setSubmitting(false);
+    if (!result.ok) setError(result.error);
   }
 
   return (
@@ -72,7 +76,7 @@ export default function AddAllowanceModal({ onConfirm, onClose }) {
 
         {error && <p className="error-text">{error}</p>}
 
-        <button type="submit" className="btn btn-primary btn-block">
+        <button type="submit" className="btn btn-primary btn-block" disabled={submitting}>
           Add {formatMoney(totalNum)}
         </button>
       </form>

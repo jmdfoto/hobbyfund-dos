@@ -6,14 +6,22 @@ ticket-by-ticket build spec.
 
 ## Stack
 
-- React + Vite, no backend (v1 is frontend-only, per spec).
-- Persistence: browser `localStorage`. The transaction ledger is the single source of truth —
-  all balances are derived from it, never stored independently.
+- React + Vite frontend.
+- Backend: a Cloudflare Worker (`worker/`) with a D1 database (`migrations/`), behind Cloudflare
+  Access for login. Parent accounts can make changes; child accounts are view-only. The Worker
+  validates every change with the same `src/lib/ledger.js` rules the browser uses.
+- The transaction ledger is the single source of truth: all balances are derived from it, never
+  stored independently.
+- Without a backend (the old Netlify site), the same build falls back to browser `localStorage`.
+
+See [docs/cloudflare-setup.md](docs/cloudflare-setup.md) for setup and local development.
 
 ## Develop
 
 ```bash
 npm install
+cp .dev.vars.example .dev.vars
+npm run db:migrate:local && npm run db:seed:local
 npm run dev
 ```
 
@@ -23,7 +31,9 @@ npm run dev
 npm run build
 ```
 
-Outputs a static site to `dist/`, deployable to Netlify (see `netlify.toml`) or any static host.
+Outputs the site to `dist/client/` and the Worker to `dist/hobbyfund/`. `npm run deploy` builds
+and deploys to Cloudflare. Netlify (see `netlify.toml`) still serves `dist/client/` as a
+localStorage-only site.
 
 ## Core rules enforced
 

@@ -1,20 +1,18 @@
 import { useState } from "react";
 import Modal from "../Modal.jsx";
-import { logPurchase } from "../../lib/ledger.js";
 
-export default function LogPurchaseModal({ transactions, onConfirm, onClose }) {
+export default function LogPurchaseModal({ onConfirm, onClose }) {
   const [note, setNote] = useState("");
   const [amount, setAmount] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    const result = logPurchase(transactions, { amount, note });
-    if (!result.ok) {
-      setError(result.error);
-      return;
-    }
-    onConfirm(result.transactions);
+    setSubmitting(true);
+    const result = await onConfirm({ type: "purchase", amount, note });
+    setSubmitting(false);
+    if (!result.ok) setError(result.error);
   }
 
   return (
@@ -46,7 +44,7 @@ export default function LogPurchaseModal({ transactions, onConfirm, onClose }) {
 
         {error && <p className="error-text">{error}</p>}
 
-        <button type="submit" className="btn btn-primary btn-block">
+        <button type="submit" className="btn btn-primary btn-block" disabled={submitting}>
           Log Purchase
         </button>
       </form>

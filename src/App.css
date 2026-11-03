@@ -464,6 +464,11 @@
   cursor: pointer;
 }
 
+.btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .btn-primary {
   background: var(--text-h);
   color: var(--bg);
@@ -492,4 +497,16 @@
   text-decoration: underline;
   padding: 8px;
   cursor: pointer;
+}
+
+/* Loading / sign-in / error screens */
+
+.status-screen {
+  padding-top: 48px;
+  align-items: center;
+  text-align: center;
+}
+
+.app-header h1.app-title-readonly {
+  cursor: default;
 }

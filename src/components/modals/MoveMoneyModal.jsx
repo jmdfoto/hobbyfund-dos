@@ -1,26 +1,25 @@
 import { useState } from "react";
 import Modal from "../Modal.jsx";
-import { moveMoney, getBalances } from "../../lib/ledger.js";
+import { getBalances } from "../../lib/ledger.js";
 import { formatMoney } from "../../lib/format.js";
 
 export default function MoveMoneyModal({ transactions, onConfirm, onClose }) {
   const [direction, setDirection] = useState("spend-to-save");
   const [amount, setAmount] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const balances = getBalances(transactions);
   const sourceLabel = direction === "spend-to-save" ? "Spend" : "Save";
   const destLabel = direction === "spend-to-save" ? "Save" : "Spend";
   const sourceBalance = direction === "spend-to-save" ? balances.spend : balances.save;
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    const result = moveMoney(transactions, { direction, amount });
-    if (!result.ok) {
-      setError(result.error);
-      return;
-    }
-    onConfirm(result.transactions);
+    setSubmitting(true);
+    const result = await onConfirm({ type: "move", direction, amount });
+    setSubmitting(false);
+    if (!result.ok) setError(result.error);
   }
 
   return (
@@ -65,7 +64,7 @@ export default function MoveMoneyModal({ transactions, onConfirm, onClose }) {
 
         {error && <p className="error-text">{error}</p>}
 
-        <button type="submit" className="btn btn-primary btn-block">
+        <button type="submit" className="btn btn-primary btn-block" disabled={submitting}>
           Move Money
         </button>
       </form>

@@ -1,0 +1,33 @@
+// Cloudflare Worker config: serves the built React app from ./dist and the API under /api/*.
+// See docs/cloudflare-setup.md for first-time setup.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "hobbyfund",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-10-01",
+  // Serve only on the custom domain, which Cloudflare Access protects. No *.workers.dev or
+  // preview URLs, so there's no second address that skips the login screen.
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "hobbyfund.app", "custom_domain": true }],
+  "assets": {
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "hobbyfund",
+      // Replace with the id printed by `npx wrangler d1 create hobbyfund`.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    // Your Zero Trust team domain, e.g. "hobbyfund.cloudflareaccess.com".
+    "ACCESS_TEAM_DOMAIN": "",
+    // The "Application Audience (AUD) Tag" from the Access application's settings.
+    "ACCESS_AUD": ""
+  }
+}

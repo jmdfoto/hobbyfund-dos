@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export default function Header({ kidName, onNameChange }) {
+export default function Header({ kidName, onNameChange, editable = true }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(kidName);
 
@@ -27,6 +27,14 @@ export default function Header({ kidName, onNameChange }) {
           }}
           autoFocus
         />
+      </header>
+    );
+  }
+
+  if (!editable) {
+    return (
+      <header className="app-header">
+        <h1 className="app-title-readonly">{kidName}'s Collection Fund</h1>
       </header>
     );
   }

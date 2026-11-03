@@ -1,26 +1,25 @@
 import { useState } from "react";
 import Modal from "../Modal.jsx";
-import { invest, getBalances } from "../../lib/ledger.js";
+import { getBalances } from "../../lib/ledger.js";
 import { formatMoney } from "../../lib/format.js";
 
 export default function InvestModal({ transactions, matchRatio, onConfirm, onClose }) {
   const [source, setSource] = useState("spend");
   const [amount, setAmount] = useState("");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const balances = getBalances(transactions);
   const sourceBalance = source === "spend" ? balances.spend : balances.save;
   const amountNum = Number(amount) || 0;
   const matchPreview = amountNum > 0 ? amountNum * matchRatio : 0;
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    const result = invest(transactions, { source, amount, matchRatio });
-    if (!result.ok) {
-      setError(result.error);
-      return;
-    }
-    onConfirm(result.transactions);
+    setSubmitting(true);
+    const result = await onConfirm({ type: "invest", source, amount });
+    setSubmitting(false);
+    if (!result.ok) setError(result.error);
   }
 
   return (
@@ -74,7 +73,7 @@ export default function InvestModal({ transactions, matchRatio, onConfirm, onClo
 
         {error && <p className="error-text">{error}</p>}
 
-        <button type="submit" className="btn btn-primary btn-block">
+        <button type="submit" className="btn btn-primary btn-block" disabled={submitting}>
           Invest
         </button>
       </form>
