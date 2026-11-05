@@ -19,15 +19,14 @@
     {
       "binding": "DB",
       "database_name": "hobbyfund",
-      // Replace with the id printed by `npx wrangler d1 create hobbyfund`.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "a9727cc2-d897-4219-89a3-2ccf42ea5b81",
       "migrations_dir": "migrations"
     }
   ],
   "vars": {
     // Your Zero Trust team domain, e.g. "hobbyfund.cloudflareaccess.com".
-    "ACCESS_TEAM_DOMAIN": "",
+    "ACCESS_TEAM_DOMAIN": "hobbyfund.cloudflareaccess.com",
     // The "Application Audience (AUD) Tag" from the Access application's settings.
-    "ACCESS_AUD": ""
+    "ACCESS_AUD": "ae521ff8cf1c5c93274a747a73ba0f7c14ef241d8a16adaf42a0bb97c3e5ef19"
   }
 }
