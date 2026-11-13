@@ -5,16 +5,28 @@ import { addAllowance, logPurchase, moveMoney, invest } from "../src/lib/ledger.
 import { authenticate, loadUser } from "./auth.js";
 import {
   loadState,
+  loadDeposits,
   commitLedgerWrite,
   updateKidName,
   ConflictError,
   DuplicateRequestError,
 } from "./store.js";
 import { transactionsFromCsv } from "./csvImport.js";
+import { computePortfolio } from "../src/lib/portfolio.js";
+import { RANGES } from "../src/lib/history.js";
+import { loadPortfolio, loadHistory, recordDailySnapshots } from "./portfolio.js";
+import { getBrokerage } from "./brokerage/index.js";
+import { getQuote, placeOrder, listOrders, orderLimits, assertCanTrade, OrderError } from "./orders.js";
 
 const MAX_BODY_BYTES = 2 * 1024 * 1024;
 const MAX_NAME_LENGTH = 40;
 const CONFLICT_RETRIES = 3;
+const MAX_NOTE_LENGTH = 100;
+function toCents(value) {
+  const str = String(value ?? "").trim();
+  if (!/^\d+(\.\d{1,2})?$/.test(str)) return null;
+  return Math.round(Number(str) * 100);
+}
 
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -82,7 +94,8 @@ function applyAction(transactions, action, matchRatio) {
 async function writeWithRetry(env, user, { action, requestId, build }) {
   for (let attempt = 0; attempt < CONFLICT_RETRIES; attempt++) {
     const state = await loadState(env, user.familyId);
-    const plan = build(state);
+    const deposits = await loadDeposits(env, user.familyId);
+    const plan = build(state, deposits);
     if (!plan.ok) return error(400, plan.error);
     try {
       await commitLedgerWrite(env, {
@@ -93,6 +106,7 @@ async function writeWithRetry(env, user, { action, requestId, build }) {
         requestId,
         details: plan.details,
         newTransactions: plan.newTransactions,
+        newDeposits: plan.newDeposits,
         softDeleteAll: plan.softDeleteAll,
       });
       const fresh = await loadState(env, user.familyId);
@@ -126,6 +140,54 @@ async function handleApi(request, env, url) {
     return json({ ok: true, state: publicState(state, user) });
   }
 
+  if (route === "GET /api/invest") {
+    const { provider, deposits, portfolio, brokerageError } = await loadPortfolio(env, user.familyId);
+    let tradingEnabled = true;
+    try {
+      assertCanTrade(env, provider);
+    } catch {
+      tradingEnabled = false;
+    }
+    return json({
+      ok: true,
+      invest: {
+        ...portfolio,
+        brokerageError,
+        tradingEnabled,
+        limits: orderLimits(env),
+        deposits: deposits.map((d) => ({
+          id: d.id,
+          date: d.date,
+          amount: d.amountCents / 100,
+          note: d.note,
+        })),
+      },
+    });
+  }
+
+  if (route === "GET /api/invest/history") {
+    const range = url.searchParams.get("range") ?? "1M";
+    if (!RANGES.includes(range)) return error(400, "Unknown range.");
+    return json({ ok: true, history: await loadHistory(env, user.familyId, range) });
+  }
+
+  if (route === "GET /api/orders") {
+    return json({ ok: true, orders: await listOrders(env, user.familyId, getBrokerage(env)) });
+  }
+
+  if (route === "GET /api/quote") {
+    if (user.role !== "parent") return error(403, "Only a parent can place orders.");
+    try {
+      const quote = await getQuote(env, user, getBrokerage(env), {
+        symbol: url.searchParams.get("symbol"),
+      });
+      return json({ ok: true, quote });
+    } catch (err) {
+      if (err instanceof OrderError) return error(err.status, err.message);
+      throw err;
+    }
+  }
+
   if (request.method !== "GET" && user.role !== "parent") {
     return error(403, "Only a parent can make changes.");
   }
@@ -147,6 +209,44 @@ async function handleApi(request, env, url) {
         };
       },
     });
+  }
+
+  if (route === "POST /api/deposits") {
+    const body = await readJson(request);
+    if (!body || !isValidRequestId(body.requestId)) return error(400, "Invalid request.");
+    const amountCents = toCents(body.amount);
+    if (!amountCents) return error(400, "Enter an amount greater than $0.");
+    const note = typeof body.note === "string" ? body.note.trim().slice(0, MAX_NOTE_LENGTH) : "";
+    return writeWithRetry(env, user, {
+      action: "brokerage.deposit",
+      requestId: body.requestId,
+      build(state, deposits) {
+        const { pending } = computePortfolio({ transactions: state.transactions, deposits, brokerage: null });
+        const pendingCents = Math.round(pending * 100);
+        if (amountCents > pendingCents) {
+          return {
+            ok: false,
+            error: `Only $${(pendingCents / 100).toFixed(2)} is waiting to be invested.`,
+          };
+        }
+        return {
+          ok: true,
+          newDeposits: [{ id: crypto.randomUUID(), date: new Date().toISOString(), amountCents, note }],
+          details: { amountCents, note },
+        };
+      },
+    });
+  }
+
+  if (route === "POST /api/orders") {
+    const body = await readJson(request);
+    if (!body) return error(400, "Invalid request.");
+    try {
+      return json({ ok: true, order: await placeOrder(env, user, getBrokerage(env), body) });
+    } catch (err) {
+      if (err instanceof OrderError) return error(err.status, err.message);
+      throw err;
+    }
   }
 
   if (route === "PUT /api/settings") {
@@ -189,11 +289,12 @@ async function handleApi(request, env, url) {
       action: "ledger.reset",
       requestId: body.requestId,
       // Soft delete: rows stay in the database (and the audit log) but drop out of the ledger.
-      build: (state) => ({
-        ok: true,
-        softDeleteAll: true,
-        details: { clearedRows: state.transactions.length },
-      }),
+      build: (state, deposits) =>
+        // Once real money has gone into the brokerage, wiping the ledger would make the
+        // records disagree with the account, so reset is refused.
+        deposits.length > 0
+          ? { ok: false, error: "Reset is turned off once real money has been deposited." }
+          : { ok: true, softDeleteAll: true, details: { clearedRows: state.transactions.length } },
     });
   }
 
@@ -210,5 +311,11 @@ export default {
       console.error(err);
       return error(500, "Something went wrong on the server.");
     }
+  },
+
+  // Cron (see triggers in wrangler.jsonc): after the US market close, store each family's
+  // portfolio value for the performance chart.
+  async scheduled(controller, env, ctx) {
+    ctx.waitUntil(recordDailySnapshots(env));
   },
 };

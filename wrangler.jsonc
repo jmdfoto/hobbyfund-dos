@@ -10,6 +10,9 @@
   "workers_dev": false,
   "preview_urls": false,
   "routes": [{ "pattern": "hobbyfund.app", "custom_domain": true }],
+  // Daily portfolio snapshot for the Invest chart: 22:00 UTC on weekdays is after the 4pm New
+  // York close in both summer (EDT) and winter (EST) time.
+  "triggers": { "crons": ["0 22 * * 1-5"] },
   "assets": {
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
@@ -27,6 +30,15 @@
     // Your Zero Trust team domain, e.g. "hobbyfund.cloudflareaccess.com".
     "ACCESS_TEAM_DOMAIN": "hobbyfund.cloudflareaccess.com",
     // The "Application Audience (AUD) Tag" from the Access application's settings.
-    "ACCESS_AUD": "ae521ff8cf1c5c93274a747a73ba0f7c14ef241d8a16adaf42a0bb97c3e5ef19"
+    "ACCESS_AUD": "ae521ff8cf1c5c93274a747a73ba0f7c14ef241d8a16adaf42a0bb97c3e5ef19",
+    // Which brokerage account the app reads: "paper" or "live". Each has its own keys, stored
+    // as Worker secrets (ALPACA_PAPER_KEY_ID / _SECRET_KEY, ALPACA_LIVE_KEY_ID / _SECRET_KEY).
+    "BROKERAGE_MODE": "live",
+    // Orders in the real (live) account are refused unless this is "true". Paper orders always
+    // work. Turning it on is a deliberate deploy, never a toggle in the app.
+    "LIVE_ORDERS_ENABLED": "false",
+    // Server-enforced limits on buys, in cents.
+    "ORDER_MAX_CENTS": "5000",
+    "DAILY_BUY_MAX_CENTS": "10000"
   }
 }

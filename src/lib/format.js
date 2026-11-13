@@ -22,3 +22,14 @@ export function formatDateTime(iso) {
     minute: "2-digit",
   });
 }
+
+// 0.0312 -> "+3.1%"
+export function formatPercentChange(ratio) {
+  const sign = ratio < 0 ? "-" : "+";
+  return `${sign}${Math.abs(ratio * 100).toFixed(1)}%`;
+}
+
+// Fractional shares: show up to 4 decimals, trimmed ("0.0123", "2").
+export function formatShares(qty) {
+  return Number(qty.toFixed(4)).toString();
+}

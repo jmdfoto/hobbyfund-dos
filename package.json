@@ -4,14 +4,14 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "cross-env CLOUDFLARE_INCLUDE_PROCESS_ENV=true vite",
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
     "db:migrate:local": "wrangler d1 migrations apply hobbyfund --local",
     "db:seed:local": "wrangler d1 execute hobbyfund --local --file=scripts/dev-seed.sql",
     "db:migrate:remote": "wrangler d1 migrations apply hobbyfund --remote",
-    "deploy": "npm run build && node -e \"require('fs').rmSync('dist/hobbyfund/.dev.vars',{force:true})\" && wrangler deploy"
+    "deploy": "npm run build && node -e \"['.dev.vars','.env'].forEach(f=>require('fs').rmSync('dist/hobbyfund/'+f,{force:true}))\" && wrangler deploy"
   },
   "dependencies": {
     "react": "^19.2.8",
@@ -22,6 +22,7 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
+    "cross-env": "^10.1.0",
     "oxlint": "^1.81.0",
     "vite": "^8.3.0",
     "wrangler": "4.156.1"

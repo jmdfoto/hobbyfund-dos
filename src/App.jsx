@@ -8,17 +8,21 @@ import {
   invest,
 } from "./lib/ledger.js";
 import { loadState, saveState } from "./lib/storage.js";
-import { connect, send, newRequestId, signOut } from "./lib/api.js";
+import { connect, send, fetchInvest, placeOrder, newRequestId, signOut } from "./lib/api.js";
 import Header from "./components/Header.jsx";
 import BalanceCards from "./components/BalanceCards.jsx";
 import ActionBar from "./components/ActionBar.jsx";
 import SaveChart from "./components/SaveChart.jsx";
 import InvestChart from "./components/InvestChart.jsx";
 import History from "./components/History.jsx";
+import Holdings from "./components/Holdings.jsx";
+import Orders from "./components/Orders.jsx";
 import AddAllowanceModal from "./components/modals/AddAllowanceModal.jsx";
 import LogPurchaseModal from "./components/modals/LogPurchaseModal.jsx";
 import MoveMoneyModal from "./components/modals/MoveMoneyModal.jsx";
 import InvestModal from "./components/modals/InvestModal.jsx";
+import RecordDepositModal from "./components/modals/RecordDepositModal.jsx";
+import TradeModal from "./components/modals/TradeModal.jsx";
 import { transactionsToCsv, downloadTextFile } from "./lib/csv.js";
 import "./App.css";
 
@@ -60,6 +64,8 @@ function App() {
   const [role, setRole] = useState("parent");
   const [state, setState] = useState(createInitialState);
   const [activeModal, setActiveModal] = useState(null);
+  // Brokerage-backed Invest numbers (server mode only); null until loaded or when unavailable.
+  const [invest, setInvest] = useState(null);
   const requestIdRef = useRef(null);
   const importInputRef = useRef(null);
 
@@ -70,6 +76,9 @@ function App() {
       if (result.mode === "server") {
         setRole(result.state.role);
         setState(result.state);
+        fetchInvest().then((r) => {
+          if (!cancelled && r.ok) setInvest(r.invest);
+        });
       } else if (result.mode === "local") {
         setState(loadState(createInitialState()));
       } else {
@@ -102,6 +111,33 @@ function App() {
   function applyServerState(serverState) {
     setRole(serverState.role);
     setState(serverState);
+    // Pending allocation depends on the ledger, so re-read the Invest numbers too.
+    refreshInvest();
+  }
+
+  async function refreshInvest() {
+    const result = await fetchInvest();
+    if (result.ok) setInvest(result.invest);
+  }
+
+  // The order id is created when the dialog opens, so retrying the same dialog can never place
+  // a second order.
+  async function handleTradeConfirm(order) {
+    const result = await placeOrder({ requestId: requestIdRef.current, ...order });
+    if (result.ok) refreshInvest();
+    return result;
+  }
+
+  async function handleDepositConfirm({ amount, note }) {
+    const result = await send("POST", "/api/deposits", {
+      requestId: requestIdRef.current,
+      amount,
+      note,
+    });
+    if (!result.ok) return result;
+    applyServerState(result.state);
+    closeModal();
+    return { ok: true };
   }
 
   // Resolves to { ok, error } so the modal can show server-side errors.
@@ -195,10 +231,18 @@ function App() {
       <Header kidName={state.kidName} onNameChange={handleNameChange} editable={isParent} />
 
       <main className="app-main">
-        <BalanceCards balances={balances} />
+        <BalanceCards balances={balances} invest={invest} />
         {isParent && <ActionBar onAction={openModal} />}
         <SaveChart transactions={state.transactions} />
-        <InvestChart transactions={state.transactions} />
+        <InvestChart transactions={state.transactions} invest={invest} />
+        <Holdings
+          invest={invest}
+          canRecordDeposit={isParent}
+          onRecordDeposit={() => openModal("deposit")}
+          canTrade={isParent}
+          onTrade={() => openModal("trade")}
+        />
+        {invest?.connected && <Orders refreshKey={invest} />}
         <History transactions={state.transactions} />
 
         <div className="utility-links">
@@ -248,6 +292,21 @@ function App() {
         <MoveMoneyModal
           transactions={state.transactions}
           onConfirm={performAction}
+          onClose={closeModal}
+        />
+      )}
+      {activeModal === "deposit" && invest && (
+        <RecordDepositModal
+          pending={invest.pending}
+          onConfirm={handleDepositConfirm}
+          onClose={closeModal}
+        />
+      )}
+      {activeModal === "trade" && invest && (
+        <TradeModal
+          holdings={invest.holdings}
+          limits={invest.limits}
+          onConfirm={handleTradeConfirm}
           onClose={closeModal}
         />
       )}

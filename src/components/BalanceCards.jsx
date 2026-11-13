@@ -1,6 +1,41 @@
-import { formatMoney } from "../lib/format.js";
+import { formatMoney, formatPercentChange } from "../lib/format.js";
 
-export default function BalanceCards({ balances }) {
+function InvestCardDetails({ balances, invest }) {
+  // No brokerage connected (or it couldn't be reached): the original card.
+  if (!invest?.connected) {
+    return (
+      <>
+        <span className="balance-value balance-value-small">{formatMoney(balances.invest)}</span>
+        <span className="balance-sub">
+          You put in {formatMoney(balances.investContributed)}, matched{" "}
+          {formatMoney(balances.investMatched)}
+        </span>
+        {invest?.brokerageError && <span className="balance-sub">{invest.brokerageError}</span>}
+      </>
+    );
+  }
+
+  const up = invest.gain >= 0;
+  return (
+    <>
+      <span className="balance-value balance-value-small">{formatMoney(invest.value)}</span>
+      <span className="balance-sub">
+        You put in {formatMoney(invest.contributed)}, matched {formatMoney(invest.matched)}
+      </span>
+      {invest.deposited > 0 && (
+        <span className={`balance-sub ${up ? "amount-credit" : "amount-debit"}`}>
+          {up ? "Up" : "Down"} {formatMoney(Math.abs(invest.gain))}
+          {invest.returnPct !== null && ` (${formatPercentChange(invest.returnPct)})`} from the market
+        </span>
+      )}
+      {invest.pending > 0 && (
+        <span className="balance-sub">{formatMoney(invest.pending)} waiting to be invested</span>
+      )}
+    </>
+  );
+}
+
+export default function BalanceCards({ balances, invest }) {
   const totalReady = balances.spend + balances.save;
 
   return (
@@ -24,11 +59,7 @@ export default function BalanceCards({ balances }) {
 
       <div className="balance-card balance-invest">
         <span className="balance-label">Invest</span>
-        <span className="balance-value balance-value-small">{formatMoney(balances.invest)}</span>
-        <span className="balance-sub">
-          You put in {formatMoney(balances.investContributed)}, matched{" "}
-          {formatMoney(balances.investMatched)}
-        </span>
+        <InvestCardDetails balances={balances} invest={invest} />
       </div>
     </div>
   );

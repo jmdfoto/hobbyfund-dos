@@ -1,11 +1,15 @@
 import { investSeries } from "../lib/ledger.js";
 import { formatMoney, formatDate } from "../lib/format.js";
+import InvestPerformanceChart from "./InvestPerformanceChart.jsx";
 
 const WIDTH = 300;
 const HEIGHT = 100;
 const BAR_GAP = 4;
 
-export default function InvestChart({ transactions }) {
+export default function InvestChart({ transactions, invest }) {
+  // Once a brokerage is connected, show real performance instead of contributions.
+  if (invest?.connected) return <InvestPerformanceChart refreshKey={invest} />;
+
   const series = investSeries(transactions);
 
   if (series.length === 0) {

@@ -1,4 +1,4 @@
-// D1 access for the ledger. The rules live in src/lib/ledger.js and run here unchanged;
+// D1 access for the ledger and brokerage deposits. The rules live in src/lib/ledger.js and run here unchanged;
 // this module only loads state, and writes new entries + an audit row atomically.
 
 export const CHILD_ID = "default";
@@ -8,6 +8,21 @@ export class DuplicateRequestError extends Error {}
 
 function toCents(amount) {
   return Math.round(amount * 100);
+}
+
+export async function loadDeposits(env, familyId) {
+  const { results } = await env.DB.prepare(
+    `SELECT id, date, amount_cents, note FROM brokerage_deposits
+     WHERE family_id = ? AND child_id = ? AND deleted_at IS NULL ORDER BY date, created_at`
+  )
+    .bind(familyId, CHILD_ID)
+    .all();
+  return results.map((r) => ({
+    id: r.id,
+    date: r.date,
+    amountCents: r.amount_cents,
+    note: r.note,
+  }));
 }
 
 export async function loadState(env, familyId) {
@@ -52,6 +67,7 @@ export async function commitLedgerWrite(env, {
   requestId,
   details,
   newTransactions = [],
+  newDeposits = [],
   softDeleteAll = false,
 }) {
   const db = env.DB;
@@ -98,6 +114,17 @@ export async function commitLedgerWrite(env, {
         actorEmail,
         ...guardArgs
       )
+    );
+  }
+
+  // Deposits share the ledger version guard: "pending" depends on both tables, so a deposit
+  // is validated against the same snapshot of the ledger it's recorded with.
+  for (const d of newDeposits) {
+    statements.push(
+      db.prepare(
+        `INSERT INTO brokerage_deposits (id, family_id, child_id, date, amount_cents, note, created_by)
+         SELECT ?, ?, ?, ?, ?, ?, ? WHERE ${guard}`
+      ).bind(d.id, familyId, CHILD_ID, d.date, d.amountCents, d.note ?? "", actorEmail, ...guardArgs)
     );
   }
 

@@ -510,3 +510,152 @@
 .app-header h1.app-title-readonly {
   cursor: default;
 }
+
+/* Investments (holdings) */
+
+.holding-amounts {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.holding-gain {
+  font-size: 13px;
+}
+
+/* Invest performance chart (line) */
+
+.range-toggle {
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.range-toggle .toggle-btn {
+  padding: 6px 0;
+  font-size: 13px;
+}
+
+.perf-chart {
+  position: relative;
+}
+
+.perf-chart-svg {
+  height: auto;
+  aspect-ratio: 300 / 120;
+  touch-action: pan-y;
+  overflow: visible;
+}
+
+.perf-line-value,
+.perf-line-deposited {
+  fill: none;
+  stroke-width: 2px;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.perf-line-value {
+  stroke: var(--invest);
+}
+
+.perf-line-deposited {
+  stroke: var(--text-muted);
+  stroke-dasharray: 4 4;
+}
+
+.perf-dot {
+  fill: var(--invest);
+  stroke: var(--card-bg);
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+}
+
+.perf-crosshair {
+  stroke: var(--border);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+}
+
+.perf-tooltip {
+  position: absolute;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text);
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.perf-tooltip strong {
+  color: var(--text-h);
+}
+
+.legend-deposited {
+  height: 0;
+  border-top: 2px dashed var(--text-muted);
+  border-radius: 0;
+  vertical-align: middle;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Buy / sell */
+
+.symbol-picks {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.symbol-picks .toggle-btn {
+  padding: 8px 0;
+  font-size: 14px;
+}
+
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.review-headline {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-h);
+  margin: 0;
+}
+
+.review-list {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 12px;
+  margin: 0;
+  font-size: 14px;
+}
+
+.review-list dt {
+  color: var(--text-muted);
+}
+
+.review-list dd {
+  margin: 0;
+  text-align: right;
+  color: var(--text-h);
+}
