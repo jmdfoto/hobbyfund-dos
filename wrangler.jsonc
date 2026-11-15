@@ -36,7 +36,7 @@
     "BROKERAGE_MODE": "live",
     // Orders in the real (live) account are refused unless this is "true". Paper orders always
     // work. Turning it on is a deliberate deploy, never a toggle in the app.
-    "LIVE_ORDERS_ENABLED": "false",
+    "LIVE_ORDERS_ENABLED": "true",
     // Server-enforced limits on buys, in cents.
     "ORDER_MAX_CENTS": "5000",
     "DAILY_BUY_MAX_CENTS": "10000"
