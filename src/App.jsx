@@ -170,6 +170,16 @@ function App() {
     else setState((s) => ({ ...s, kidName: previous }));
   }
 
+  async function handleMatchChange(matchRatio) {
+    const previous = state.matchRatio;
+    setState((s) => ({ ...s, matchRatio }));
+    if (mode !== "server") return { ok: true };
+    const result = await send("PUT", "/api/settings", { matchRatio });
+    if (result.ok) applyServerState(result.state);
+    else setState((s) => ({ ...s, matchRatio: previous }));
+    return result;
+  }
+
   function handleExportCsv() {
     const csv = transactionsToCsv(state.transactions);
     const namePart = state.kidName.trim().toLowerCase().replace(/\s+/g, "-") || "collection-fund";
@@ -314,6 +324,7 @@ function App() {
         <InvestModal
           transactions={state.transactions}
           matchRatio={state.matchRatio}
+          onMatchChange={handleMatchChange}
           onConfirm={performAction}
           onClose={closeModal}
         />

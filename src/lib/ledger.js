@@ -188,6 +188,10 @@ export function invest(transactions, { source, amount, matchRatio }) {
     note: `Invested from ${srcLabel}`,
     date,
   });
+  // With the match turned off, no $0 "Parent match" line is recorded.
+  if (!(matchAmount > 0)) {
+    return { ok: true, transactions: [...transactions, debit, contribution] };
+  }
   const match = makeTx({
     type: "match",
     bucket: "invest",

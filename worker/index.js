@@ -8,6 +8,7 @@ import {
   loadDeposits,
   commitLedgerWrite,
   updateKidName,
+  updateMatchRatio,
   ConflictError,
   DuplicateRequestError,
 } from "./store.js";
@@ -20,6 +21,7 @@ import { getQuote, placeOrder, listOrders, orderLimits, assertCanTrade, OrderErr
 
 const MAX_BODY_BYTES = 2 * 1024 * 1024;
 const MAX_NAME_LENGTH = 40;
+const MATCH_RATIOS = [0, 0.5, 1];
 const CONFLICT_RETRIES = 3;
 const MAX_NOTE_LENGTH = 100;
 function toCents(value) {
@@ -251,9 +253,15 @@ async function handleApi(request, env, url) {
 
   if (route === "PUT /api/settings") {
     const body = await readJson(request);
-    const kidName = typeof body?.kidName === "string" ? body.kidName.trim() : "";
-    if (!kidName || kidName.length > MAX_NAME_LENGTH) return error(400, "Enter a name.");
-    await updateKidName(env, { familyId: user.familyId, actorEmail: user.email, kidName });
+    if (body?.matchRatio !== undefined) {
+      const matchRatio = Number(body.matchRatio);
+      if (!MATCH_RATIOS.includes(matchRatio)) return error(400, "Choose a match of 0%, 50% or 100%.");
+      await updateMatchRatio(env, { familyId: user.familyId, actorEmail: user.email, matchRatio });
+    } else {
+      const kidName = typeof body?.kidName === "string" ? body.kidName.trim() : "";
+      if (!kidName || kidName.length > MAX_NAME_LENGTH) return error(400, "Enter a name.");
+      await updateKidName(env, { familyId: user.familyId, actorEmail: user.email, kidName });
+    }
     const state = await loadState(env, user.familyId);
     return json({ ok: true, state: publicState(state, user) });
   }

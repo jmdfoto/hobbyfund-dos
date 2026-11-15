@@ -148,6 +148,20 @@ export async function commitLedgerWrite(env, {
   if (results[results.length - 1].meta.changes !== 1) throw new ConflictError();
 }
 
+// Only affects future investments; past match entries stay as recorded.
+export async function updateMatchRatio(env, { familyId, actorEmail, matchRatio }) {
+  await env.DB.batch([
+    env.DB.prepare("UPDATE settings SET match_ratio = ? WHERE family_id = ? AND child_id = ?").bind(
+      matchRatio,
+      familyId,
+      CHILD_ID
+    ),
+    env.DB.prepare(
+      "INSERT INTO audit_log (actor_email, action, details) VALUES (?, 'settings.matchRatio', ?)"
+    ).bind(actorEmail, JSON.stringify({ matchRatio })),
+  ]);
+}
+
 export async function updateKidName(env, { familyId, actorEmail, kidName }) {
   await env.DB.batch([
     env.DB.prepare("UPDATE settings SET kid_name = ? WHERE family_id = ? AND child_id = ?").bind(

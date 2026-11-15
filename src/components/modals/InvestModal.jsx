@@ -3,7 +3,13 @@ import Modal from "../Modal.jsx";
 import { getBalances } from "../../lib/ledger.js";
 import { formatMoney } from "../../lib/format.js";
 
-export default function InvestModal({ transactions, matchRatio, onConfirm, onClose }) {
+const MATCH_OPTIONS = [
+  { ratio: 0, label: "No match" },
+  { ratio: 0.5, label: "50%" },
+  { ratio: 1, label: "100%" },
+];
+
+export default function InvestModal({ transactions, matchRatio, onMatchChange, onConfirm, onClose }) {
   const [source, setSource] = useState("spend");
   const [amount, setAmount] = useState("");
   const [error, setError] = useState("");
@@ -64,10 +70,31 @@ export default function InvestModal({ transactions, matchRatio, onConfirm, onClo
           />
         </label>
 
+        <div className="field">
+          <span>Parent match</span>
+          <div className="direction-toggle">
+            {MATCH_OPTIONS.map((o) => (
+              <button
+                key={o.ratio}
+                type="button"
+                className={`toggle-btn ${matchRatio === o.ratio ? "active" : ""}`}
+                onClick={async () => {
+                  setError("");
+                  const r = await onMatchChange(o.ratio);
+                  if (!r.ok) setError(r.error);
+                }}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {amountNum > 0 && (
           <p className="hint-text match-preview">
-            You put in {formatMoney(amountNum)}, parent matches {formatMoney(matchPreview)} → Invest
-            grows by {formatMoney(amountNum + matchPreview)}.
+            {matchPreview > 0
+              ? `You put in ${formatMoney(amountNum)}, parent matches ${formatMoney(matchPreview)} → Invest grows by ${formatMoney(amountNum + matchPreview)}.`
+              : `You put in ${formatMoney(amountNum)}, no parent match → Invest grows by ${formatMoney(amountNum)}.`}
           </p>
         )}
 
